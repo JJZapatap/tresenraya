@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - Tres en Raya</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+        }
+        .container {
+            background: rgba(255,255,255,0.15);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0 distinguish);
+            max-width: 500px;
+            width: 100%;
+        }
+        .setup, .game, .result {
+            margin: 20px 0;
+        }
+        input {
+            padding: 12px;
+            margin: 10px;
+            width: 80%;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+        }
+        button {
+            padding: 12px 25px;
+            margin: 10px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 10px;
+            background: #fff;
+            color: #667eea;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+            margin: 30px auto;
+            width: fit-content;
+        }
+        .cell {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            font-size: 3.5em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+            user-select: none;
+        }
+        .cell:hover {
+            background: rgba(255,255,255,0.4);
+            transform: scale(1.05);
+        }
+        .cell.x { color: #ff6b6b; }
+        .cell.o { color: #4ecdc4; }
+        .turn {
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+        .winner {
+            font-size: 2.5em;
+            margin: 20px 0;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.7);
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Tic Tac Toe</h1>
+
+        <!-- Pantalla de inicio -->
+        <div id="setup" class="setup">
+            <h2>Ingresa los nombres de los jugadores</h2>
+            <input type="text" id="player1" placeholder="Jugador 1 (será X)" maxlength="15">
+            <input type="text" id="player2" placeholder="Jugador 2 (será O)" maxlength="15">
+            <br>
+            <button onclick="startGame()">Iniciar Juego</button>
+        </div>
+
+        <!-- Juego en curso -->
+        <div id="game" class="game hidden">
+            <div class="turn" id="turnInfo">Turno de: <span id="currentPlayer"></span></div>
+            <div class="board" id="board"></div>
+            <button onclick="resetBoard()">Reiniciar Partida</button>
+        </div>
+
+        <!-- Resultado de la partida -->
+        <div id="result" class="result hidden">
+            <div class="winner" id="winnerText"></div>
+            <button onclick="playAgain()">Jugar Otra Partida</button>
+            <button onclick="endGame()">Terminar Juego</button>
+        </div>
+    </div>
+
+    <script>
+        let player1Name = "";
+        let player2Name = "";
+        let currentPlayer = "X"; // Siempre empieza X en la primera partida
+        let lastWinner = null; // Guardará 'X' o 'O' del ganador anterior
+        let board = ["", "", "", "", "", "", "", "", ""];
+        let gameActive = true;
+
+        const cells = document.querySelectorAll('.cell');
+        const boardElement = document.getElementById('board');
+        const turnInfo = document.getElementById('turnInfo');
+        const currentPlayerSpan = document.getElementById('currentPlayer');
+        const winnerText = document.getElementById('winnerText');
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        function startGame() {
+            player1Name = document.getElementById('player1').value.trim() || "Jugador 1";
+            player2Name = document.getElementById('player2').value.trim() || "Jugador 2";
+
+            // Determinar quién empieza según la partida anterior
+            if (lastWinner === "O") {
+                currentPlayer = "O";
+            } else {
+                currentPlayer = "X"; // Primera partida o empate anterior
+            }
+
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+
+            updateTurnDisplay();
+            createBoard();
+        }
+
+        function createBoard() {
+            boardElement.innerHTML = "";
+            board = ["", "", "", "", "", "", "", "", ""];
+            gameActive = true;
+
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', handleCellClick);
+                boardElement.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(e) {
+            const index = e.target.dataset.index;
+            if (board[index] !== "" || !gameActive) return;
+
+            board[index] = currentPlayer;
+            e.target.textContent = currentPlayer;
+            e.target.classList.add(currentPlayer.toLowerCase());
+
+            if (checkWinner()) {
+                endRound(currentPlayer);
+            } else if (board.every(cell => cell !== "")) {
+                endRound("empate");
+            } else {
+                currentPlayer = currentPlayer === "X" ? "O" : "X";
+                updateTurnDisplay();
+            }
+        }
+
+        function checkWinner() {
+            return winningConditions.some(condition => {
+                return condition.every(index => board[index] === currentPlayer);
+            });
+        }
+
+        function updateTurnDisplay() {
+            const name = currentPlayer === "X" ? player1Name : player2Name;
+            currentPlayerSpan.textContent = `${name} (${currentPlayer})`;
+        }
+
+        function endRound(result) {
+            gameActive = false;
+            document.getElementById('game').classList.add('hidden');
+            document.getElementById('result').classList.remove('hidden');
+
+            if (result === "empate") {
+                winnerText.textContent = "¡Empate! 🤝";
+                lastWinner = null; // Próxima partida empieza X
+            } else {
+                const winnerName = result === "X" ? player1Name : player2Name;
+                winnerText.textContent = `¡Ganó ${winnerName}! 🎉`;
+                lastWinner = result;
+            }
+        }
+
+        function playAgain() {
+            document.get3ElementById('turnInfo').style.display = 'block';
+            resetBoard();
+        }
+
+        function resetBoard() {
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+            createBoard();
+
+            // Determinar quién empieza la nueva partida
+            if (lastWinner === "O") {
+                currentPlayer = "O";
+            } else {
+                currentPlayer = "X";
+            }
+            updateTurnDisplay();
+        }
+
+        function endGame() {
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('setup').classList.remove('hidden');
+            document.getElementById('player1').value = "";
+            document.getElementById('player2').value = "";
+            lastWinner = null;
+        }
+    </script>
+</body>
+</html>
